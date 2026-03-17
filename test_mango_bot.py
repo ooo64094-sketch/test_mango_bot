@@ -844,11 +844,5 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 print("Bot is running...")
 
-import asyncio
-
-async def main():
-    await app.run_polling()
-
 if __name__ == "__main__":
-    asyncio.run(main())
-    
+    app.run_polling()
