@@ -825,13 +825,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         traceback.print_exc()
 
 
-import asyncio
-
-async def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Bot is running...")
-    await app.run_polling()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+print("Bot is running...")
+app.run_polling()
