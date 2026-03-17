@@ -12,7 +12,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filte
 # =========================
 # الإعدادات
 # =========================
-BOT_TOKEN = "8658680521:AAEJvZBQAdG4QkfW2jBGrPNYPVUuK34ow3I"
+BOT_TOKEN = "8658680521:AAFq4BPpVh0SJeMfr3lBLfO7l7apWLHbIPM"
 
 HEADLESS = False
 WAIT_MS = 3000
