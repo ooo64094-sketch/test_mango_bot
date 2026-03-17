@@ -668,7 +668,7 @@ async def analyze_mango_product(turkey_url: str):
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
-            headless=HEADLESS,
+            headless=True,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
