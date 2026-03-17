@@ -96,33 +96,30 @@ def progressive_load(diff_iqd: int) -> int:
     if diff_iqd <= 0:
         return 0
 
-    points = [
-        (0, 0),
-        (5000, 2500),
-        (7000, 3000),
-        (10000, 4000),
-        (11000, 5000),
-        (12000, 5500),
-        (13000, 6000),
-        (14000, 6500),
-        (15000, 6500),
-        (16000, 7000),
-        (18000, 8500),
-        (19000, 9000),
-        (20000, 10000),
-    ]
-
-    if diff_iqd >= 20000:
-        return round_up_to_500(diff_iqd / 2)
-
-    for i in range(len(points) - 1):
-        x1, y1 = points[i]
-        x2, y2 = points[i + 1]
-        if x1 <= diff_iqd <= x2:
-            raw = interpolate(diff_iqd, x1, y1, x2, y2)
-            return round_up_to_500(raw)
-
-    return 0
+    if diff_iqd < 5000:
+        return 0
+    elif diff_iqd < 7000:
+        return 1000
+    elif diff_iqd < 9000:
+        return 2000
+    elif diff_iqd < 11000:
+        return 3000
+    elif diff_iqd == 11000:
+        return 3500
+    elif diff_iqd < 15000:
+        return 4000
+    elif diff_iqd == 15000:
+        return 4500
+    elif diff_iqd == 16000:
+        return 5500
+    elif diff_iqd == 17000:
+        return 6000
+    elif diff_iqd == 18000:
+        return 7000
+    elif diff_iqd == 19000:
+        return 8000
+    else:
+        return round_up_to_500(diff_iqd * 0.40)
 
 def calculate_system_load(diff_iqd: int, turkey_discount: bool, iraq_discount: bool) -> int:
     if diff_iqd <= 0:

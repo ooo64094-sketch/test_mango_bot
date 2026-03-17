@@ -1,2 +1,2 @@
-playwright
-python-telegram-bot
+python-telegram-bot==21.6
+playwright==1.52.0
