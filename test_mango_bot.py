@@ -121,6 +121,7 @@ def progressive_load(diff_iqd: int) -> int:
     else:
         return round_up_to_500(diff_iqd * 0.40)
 
+
 def calculate_system_load(diff_iqd: int, turkey_discount: bool, iraq_discount: bool) -> int:
     if diff_iqd <= 0:
         return 0
@@ -134,7 +135,6 @@ def calculate_system_load(diff_iqd: int, turkey_discount: bool, iraq_discount: b
         return load
 
     return progressive_load(diff_iqd)
-
 
 
 def clean_final_price_and_adjust_load(converted_iqd: int, system_load: int):
@@ -394,7 +394,6 @@ def parse_iraq_price_from_html(page_html: str, body_text: str, product_name: str
 
     current = None
 
-    # 1) اقرأ السعر الرئيسي من Current price أولاً
     m = re.search(
         r'Current price[^I]{0,80}IQD\s*([\d,]+(?:\.\d{2})?)',
         body_text,
@@ -403,7 +402,6 @@ def parse_iraq_price_from_html(page_html: str, body_text: str, product_name: str
     if m:
         current = parse_iqd_number(m.group(1))
     else:
-        # 2) fallback من HTML
         m = re.search(
             r'Current price[^I]{0,120}IQD\s*([\d,]+(?:\.\d{2})?)',
             html_text,
@@ -412,7 +410,6 @@ def parse_iraq_price_from_html(page_html: str, body_text: str, product_name: str
         if m:
             current = parse_iqd_number(m.group(1))
 
-    # 3) fallback من قرب اسم المنتج
     if current is None and product_name:
         idx = body_text.find(product_name)
         if idx != -1:
@@ -421,7 +418,6 @@ def parse_iraq_price_from_html(page_html: str, body_text: str, product_name: str
             if vals:
                 current = vals[0]
 
-    # 4) fallback عام
     if current is None:
         vals = extract_iqd_values(body_text)
         if vals:
@@ -430,8 +426,6 @@ def parse_iraq_price_from_html(page_html: str, body_text: str, product_name: str
     if current is None:
         return None, False
 
-    # التخفيض:
-    # نعم فقط إذا وجد Old price أو سعران داخل بلوك السعر الرئيسي نفسه
     has_discount = False
 
     m_current = re.search(r'Current price', body_text, flags=re.I)
@@ -461,82 +455,75 @@ def parse_iraq_price_from_html(page_html: str, body_text: str, product_name: str
 
 
 # =========================
-# رابط العراق
+# كشف الحظر / Access Denied
 # =========================
-def extract_iraq_url_from_html(page_html: str, ref_code: str):
-    html_text = html_lib.unescape(page_html).replace("\\/", "/")
+def is_access_denied_page(body_text: str, page_html: str, page_title: str = "") -> bool:
+    text = " ".join([
+        body_text or "",
+        page_html or "",
+        page_title or "",
+    ]).lower()
+
+    blocked_signs = [
+        "access denied",
+        "service unavailable",
+        "reference #",
+        "temporarily unavailable",
+        "forbidden",
+        "403",
+        "request blocked",
+    ]
+
+    return any(sign in text for sign in blocked_signs)
+
+
+# =========================
+# رابط العراق من البحث بالكود
+# =========================
+async def find_iraq_url_by_search(page, ref_code: str):
+    search_urls = [
+        f"https://shop.mango.com/iq/search?q={ref_code}",
+        f"https://shop.mango.com/iq/en/search?q={ref_code}",
+    ]
 
     patterns = [
         rf'https://shop\.mango\.com/iq/en/p/[^"\']*_{ref_code}',
         rf'/iq/en/p/[^"\']*_{ref_code}',
     ]
 
-    for pattern in patterns:
-        m = re.search(pattern, html_text, flags=re.I)
-        if m:
-            url = m.group(0)
-            if url.startswith("/"):
-                url = "https://shop.mango.com" + url
-            url = url.split("&amp;")[0].split('"')[0].split("'")[0]
-            return url
+    for search_url in search_urls:
+        try:
+            await page.goto(search_url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+            await page.wait_for_timeout(2500)
+
+            await select_irak_country_if_needed(page)
+            await accept_cookies(page)
+            await page.wait_for_timeout(1200)
+
+            body_text = await page.locator("body").inner_text()
+            page_html = await page.content()
+            page_title = await page.title()
+
+            if is_access_denied_page(body_text, page_html, page_title):
+                raise RuntimeError("Mango حظر الطلب من السيرفر أثناء البحث في موقع العراق")
+
+            html_text = html_lib.unescape(page_html).replace("\\/", "/")
+
+            for pattern in patterns:
+                m = re.search(pattern, html_text, flags=re.I)
+                if m:
+                    url = m.group(0)
+                    if url.startswith("/"):
+                        url = "https://shop.mango.com" + url
+                    url = url.split("&amp;")[0].split('"')[0].split("'")[0]
+                    return url
+
+        except RuntimeError:
+            raise
+        except:
+            pass
 
     return None
-
-
-def build_iraq_url_guesses(ref_code: str, product_name: str):
-    en_slug = slugify_en(product_name)
-
-    guesses = [
-        f"https://shop.mango.com/iq/en/p/women/coats/coats/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/jeans/flare/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/dresses-and-jumpsuits/dresses/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/shirts/shirts/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/t-shirts/t-shirts/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/trousers/trousers/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/skirts/skirts/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/jackets-and-blazers/jackets/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/cardigans-and-sweaters/sweaters/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/bags/shoulder/{en_slug}_{ref_code}",
-        f"https://shop.mango.com/iq/en/p/women/{en_slug}_{ref_code}",
-    ]
-
-    out = []
-    seen = set()
-    for g in guesses:
-        if g not in seen:
-            out.append(g)
-            seen.add(g)
-
-    return out
-
-
-async def url_looks_like_product(page, url: str, ref_code: str):
-    try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
-        await page.wait_for_timeout(2000)
-        await select_irak_country_if_needed(page)
-        await accept_cookies(page)
-        await page.wait_for_timeout(1200)
-
-        body = await page.locator("body").inner_text()
-        body_low = body.lower()
-
-        if "doesn't exist" in body_low or "we're sorry" in body_low:
-            return False
-
-        if ref_code not in page.url and ref_code not in body:
-            return False
-
-        has_iqd = "IQD" in body
-
-        try:
-            has_h1 = await page.locator("h1").count() > 0
-        except:
-            has_h1 = False
-
-        return has_iqd or has_h1
-    except:
-        return False
 
 
 # =========================
@@ -555,6 +542,10 @@ async def scrape_turkey(page, turkey_url: str):
 
     body_text = await page.locator("body").inner_text()
     page_html = await page.content()
+    page_title = await page.title()
+
+    if is_access_denied_page(body_text, page_html, page_title):
+        raise RuntimeError("Mango حظر الطلب من السيرفر أثناء فتح صفحة تركيا")
 
     name = "غير معروف"
     try:
@@ -596,6 +587,10 @@ async def scrape_iraq(page, iraq_url: str):
 
     body_text = await page.locator("body").inner_text()
     page_html = await page.content()
+    page_title = await page.title()
+
+    if is_access_denied_page(body_text, page_html, page_title):
+        raise RuntimeError("Mango حظر الطلب من السيرفر أثناء فتح صفحة العراق")
 
     product_name = ""
     try:
@@ -720,22 +715,12 @@ async def analyze_mango_product(turkey_url: str):
         )
         iq_page = await iq_context.new_page()
 
-        iraq_url = extract_iraq_url_from_html(tr_data["page_html"], ref_code)
-
-        if not iraq_url:
-            guesses = build_iraq_url_guesses(ref_code, tr_data["name"])
-            iraq_url = None
-
-            for guess in guesses:
-                ok = await url_looks_like_product(iq_page, guess, ref_code)
-                if ok:
-                    iraq_url = guess
-                    break
+        iraq_url = await find_iraq_url_by_search(iq_page, ref_code)
 
         if not iraq_url:
             await iq_context.close()
             await browser.close()
-            raise ValueError("لم أستطع إيجاد رابط العراق لهذه القطعة.")
+            raise ValueError("لم أستطع إيجاد رابط العراق لهذه القطعة من البحث.")
 
         iq_data = await scrape_iraq(iq_page, iraq_url)
         await iq_context.close()
