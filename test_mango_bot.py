@@ -684,7 +684,14 @@ async def analyze_mango_product(turkey_url: str):
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/124.0.0.0 Safari/537.36"
             ),
-            extra_http_headers={"Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8"},
+            extra_http_headers={
+                "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+                "Upgrade-Insecure-Requests": "1",
+            },
             viewport={"width": 1366, "height": 900},
         )
         tr_page = await tr_context.new_page()
@@ -701,7 +708,14 @@ async def analyze_mango_product(turkey_url: str):
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/124.0.0.0 Safari/537.36"
             ),
-            extra_http_headers={"Accept-Language": "en-IQ,en;q=0.9,ar-IQ;q=0.8"},
+            extra_http_headers={
+                "Accept-Language": "en-IQ,en;q=0.9,ar-IQ;q=0.8",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+                "Upgrade-Insecure-Requests": "1",
+            },
             viewport={"width": 1366, "height": 900},
         )
         iq_page = await iq_context.new_page()
